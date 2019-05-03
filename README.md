@@ -38,7 +38,7 @@ Copy the **lb-bin.zip** archive to the instance, and unzip it:
 scp -i CNV-AWS.pem ./lb-bin.zip ec2-user@<IP_ADDRESS>:~
 ```
 
-Append the following, to **etc/rc.d/rc.local**:
+Run the following, and append it to **etc/rc.d/rc.local**:
 
 ```
 export CLASSPATH=$CLASSPATH:/home/ec2-user/aws-java-sdk-1.11.538/lib/aws-java-sdk-1.11.538.jar:/home/ec2-user/aws-java-sdk-1.11.538/third-party/lib/*:.
