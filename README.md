@@ -53,6 +53,7 @@ Create the **~/.aws** folder and put the following files in it:
     key-name=CNV-lab-AWS
     sec-group=CNV-ssh+http
     instace-type=t2.micro
+    subnet-id=subnet-ac760882
     ```
 - credentials (example)
     ```

@@ -23,17 +23,17 @@ import com.amazonaws.util.EC2MetadataUtils;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AwsUtils {
 
-    public static final int RUNNING_CODE = 16;
-    public static final int PENDING_CODE = 0;
+    private static final int RUNNING_CODE = 16;
     private static String awsImageId;
     private static String awsKeyName;
     private static String awsSecGroup;
@@ -43,6 +43,9 @@ public final class AwsUtils {
     private static AmazonCloudWatch cloudWatch;
 
     private static final String PROPERTIES_PATH = "/home/ec2-user/.aws/webserver.properties";
+
+    public static Map<String, InstanceInfo> runningInstanceInfos = new ConcurrentHashMap<>();
+    public static AtomicInteger liveInstancesCounter = new AtomicInteger(0);
 
     // Initialize variables
     static {
@@ -82,12 +85,15 @@ public final class AwsUtils {
     private AwsUtils() {
     }
 
-    public static Set<Instance> getPendingInstances() {
-        return getInstances(PENDING_CODE);
-    }
-
-    public static Set<Instance> getRunningInstances() {
-        return getInstances(RUNNING_CODE);
+    private static void updateRunningInstances() {
+        Set<Instance> instances = getInstances(RUNNING_CODE);
+        for (Instance inst : instances) {
+            if (!runningInstanceInfos.containsKey(inst.getInstanceId())) {
+                runningInstanceInfos.put(inst.getInstanceId(), new InstanceInfo(inst));
+            } else {
+                runningInstanceInfos.get(inst.getInstanceId()).setInstance(inst);
+            }
+        }
     }
 
     private static Set<Instance> getInstances(int code) {
@@ -105,10 +111,9 @@ public final class AwsUtils {
             }
         }
         return instances;
-
     }
 
-    public static Instance launchInstance() {
+    public static void launchInstance() {
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
 
         runInstancesRequest.withImageId(awsImageId)
@@ -119,10 +124,10 @@ public final class AwsUtils {
             .withSecurityGroups(awsSecGroup)
             .withMonitoring(true);
 
-        RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
+        ec2.runInstances(runInstancesRequest);
         System.out.println("Launching instance...");
 
-        return runInstancesResult.getReservation().getInstances().get(0);
+        liveInstancesCounter.getAndIncrement();
     }
 
     public static void terminateInstance(String instanceId) {
@@ -130,6 +135,15 @@ public final class AwsUtils {
         terminateInstancesRequest.withInstanceIds(instanceId);
         ec2.terminateInstances(terminateInstancesRequest);
         System.out.println("Terminating instance " + instanceId + "...");
+
+        while (getInstanceStatus(instanceId) == RUNNING_CODE) {
+            try {
+                Thread.sleep(2);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        runningInstanceInfos.remove(instanceId);
     }
 
     public static int getInstanceStatus(String instanceId) {
@@ -139,15 +153,15 @@ public final class AwsUtils {
         return state.getCode();
     }
 
-    public static Map<Instance, Double> getCpuMetricsPerInstance() {
-        Map<Instance, Double> cpuMetricsPerInstance = new HashMap<>();
-
+    public static void updateCpuMetrics() {
         long offsetInMilliseconds = 1000 * 60 * 10;
         Dimension instanceDimension = new Dimension();
         instanceDimension.setName("InstanceId");
 
-        for (Instance instance : getRunningInstances()) {
-            String name = instance.getInstanceId();
+        updateRunningInstances();
+
+        for (Map.Entry<String, InstanceInfo> entry : runningInstanceInfos.entrySet()) {
+            String name = entry.getValue().getInstance().getInstanceId();
             instanceDimension.setValue(name);
 
             GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
@@ -158,35 +172,49 @@ public final class AwsUtils {
                 .withStatistics("Average")
                 .withDimensions(instanceDimension)
                 .withEndTime(new Date());
-
-            GetMetricStatisticsResult getMetricStatisticsResult =
-                cloudWatch.getMetricStatistics(request);
+            GetMetricStatisticsResult getMetricStatisticsResult = cloudWatch.getMetricStatistics(request);
             List<Datapoint> datapoints = getMetricStatisticsResult.getDatapoints();
 
-            Double average;
+            Datapoint lastDatapoint = null;
+            for (Datapoint dp : datapoints) {
+                if (lastDatapoint == null) {
+                    lastDatapoint = dp;
+                }
+                if (lastDatapoint.getTimestamp().before(dp.getTimestamp())) {
+                    lastDatapoint = dp;
+                }
+            }
 
-            if (!datapoints.isEmpty()) {
-                average = datapoints.get(datapoints.size() - 1).getAverage();
+            double average;
+            if (lastDatapoint != null) {
+                average = lastDatapoint.getAverage();
+                entry.getValue().setFresh(false);
             } else {
-                average = 0.0;
+                average = 0;
             }
 
-            cpuMetricsPerInstance.put(instance, average);
+            entry.getValue().setLastCpuMeasured(average);
+            System.out.println("CPU Utilization on " + entry.getValue().getInstance().getInstanceId() + ": " + average);
         }
-        return cpuMetricsPerInstance;
     }
 
-    public static Instance getLeastUsedInstance() {
-        Instance instance = null;
-        Map<Instance, Double> cpuMetrics = AwsUtils.getCpuMetricsPerInstance();
-        Double min = 100.0;
-        for (Map.Entry<Instance, Double> entry : cpuMetrics.entrySet()) {
-            if (entry.getValue() <= min) {
-                min = entry.getValue();
-                instance = entry.getKey();
+    public static InstanceInfo getLeastUsedValidInstanceInfo() {
+        updateRunningInstances();
+
+        InstanceInfo instanceInfo = null;
+        int min = Integer.MAX_VALUE;
+
+        for (Map.Entry<String, InstanceInfo> entry : runningInstanceInfos.entrySet()) {
+            if (entry.getValue().getNumCurrentRequests() < min && !entry.getValue().willTerminate()) {
+                instanceInfo = entry.getValue();
+                min = instanceInfo.getNumCurrentRequests();
             }
         }
-        return instance;
+        return instanceInfo;
     }
 
+    public static void markInstance(String leastUsedInstanceId) {
+        runningInstanceInfos.get(leastUsedInstanceId).setTerminate(true);
+        liveInstancesCounter.getAndDecrement();
+    }
 }
