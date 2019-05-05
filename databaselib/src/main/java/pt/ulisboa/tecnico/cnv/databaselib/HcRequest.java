@@ -19,14 +19,42 @@ public class HcRequest {
     private String strategy;
     private String map;
     private double metrics;
+    private boolean completed;
+
+    public HcRequest() {
+    }
+
+    public HcRequest(String[] params) {
+        this.buildRequestId(params);
+        this.setWidth(Integer.parseInt(params[0].substring(2)));
+        this.setHeight(Integer.parseInt(params[1].substring(2)));
+        this.setX0(Integer.parseInt(params[2].substring(3)));
+        this.setX1(Integer.parseInt(params[3].substring(3)));
+        this.setY0(Integer.parseInt(params[4].substring(3)));
+        this.setY1(Integer.parseInt(params[5].substring(3)));
+        this.setxS(Integer.parseInt(params[6].substring(3)));
+        this.setyS(Integer.parseInt(params[7].substring(3)));
+        this.setStrategy(params[8].substring(2));
+        this.setMap(params[9].substring(2));
+        this.setMetrics(0);
+        this.setCompleted(false);
+    }
 
     @DynamoDBHashKey(attributeName = "request_id")
-    public String getId() {
+    public String getRequestId() {
         return requestId;
     }
 
-    public void setId(String requestId) {
+    public void setRequestId(String requestId) {
         this.requestId = requestId;
+    }
+
+    public void buildRequestId(String[] params) {
+        StringBuilder builder = new StringBuilder();
+        for (String string : params) {
+            builder.append(string);
+        }
+        this.setRequestId(builder.toString());
     }
 
     @DynamoDBAttribute(attributeName = "width")
@@ -126,5 +154,20 @@ public class HcRequest {
 
     public void setMetrics(double metrics) {
         this.metrics = metrics;
+    }
+
+    @DynamoDBAttribute(attributeName = "completed")
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
+
+    @Override
+    public String toString() {
+        return "Request:" + "\n\t" + "id: " + this.getRequestId() + "\n\t" + this.getWidth() + " " + this.getHeight()
+            + " " + this.getX0() + " " + this.getStrategy() + " " + this.getMap();
     }
 }

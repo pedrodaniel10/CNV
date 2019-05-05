@@ -1,16 +1,20 @@
 import BIT.highBIT.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+import pt.ulisboa.tecnico.cnv.databaselib.HcRequest;
+import pt.ulisboa.tecnico.cnv.databaselib.DatabaseUtils;
 
 public class ICountParallel {
     private static PrintStream out = null;
-    private static Map<Long, Long> countersThreads = new HashMap<>();
+    private static Map<Long, HcRequest> threadsRequests = new ConcurrentHashMap<>();
     private static final String INFO_STRING = "[Info] ";
     private static final String FILE_PATH = "instrumentation.txt";
     /* main reads in all the files class files present in the input directory,
      * instruments them, and outputs them to the specified output directory.
      */
+
     public static void main(String argv[]) {
         File file_in = new File(argv[0]);
         String infilenames[] = file_in.list();
@@ -37,29 +41,33 @@ public class ICountParallel {
         }
     }
     
-    public static synchronized void printICount(String foo) {
+    public static void printICount(String foo) {
         Long threadId = Thread.currentThread().getId();
-        String countString = "Thread " + threadId + ": " + countersThreads.get(threadId) + " instructions";
+        String countString = "Thread " + threadId + ": " + threadsRequests.get(threadId).getMetrics() + " instructions";
         System.out.print(INFO_STRING);
         System.out.println(countString);
 
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(FILE_PATH, true)))) {
-            out.println(countString);
-        } catch (IOException e) {
-            System.err.println(e);
-        }
+        HcRequest hcRequest = threadsRequests.get(threadId);
 
-        //threads are reused
-        countersThreads.put(threadId, new Long(0));
+        if (!hcRequest.isCompleted()) {
+            hcRequest.setCompleted(true);
+            DatabaseUtils.save(hcRequest);
+        }
     }
 
-    public static synchronized void count(int incr) {
+    public static void count(int incr) {
         Long threadId = Thread.currentThread().getId();
-        if (!countersThreads.containsKey(threadId)) {
-            countersThreads.put(threadId, new Long(incr));
-        } else {
-            countersThreads.put(threadId, countersThreads.get(threadId) + incr);
+
+        HcRequest hcRequest = threadsRequests.get(threadId);
+
+        if (!hcRequest.isCompleted()) {
+            hcRequest.setMetrics(hcRequest.getMetrics() + incr);
         }
+    }
+
+    public static void initCounter(HcRequest hcRequest) {
+        Long threadId = Thread.currentThread().getId();
+        threadsRequests.put(threadId, hcRequest);
     }
 
 }

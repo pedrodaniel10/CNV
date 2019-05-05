@@ -43,6 +43,7 @@ public final class AwsUtils {
     private static AmazonCloudWatch cloudWatch;
 
     private static final String PROPERTIES_PATH = "/home/ec2-user/.aws/webserver.properties";
+    private static final String CREDENTIALS_PATH = "/home/ec2-user/.aws/credentials";
 
     public static Map<String, InstanceInfo> runningInstanceInfos = new ConcurrentHashMap<>();
     public static AtomicInteger liveInstancesCounter = new AtomicInteger(0);
@@ -51,7 +52,7 @@ public final class AwsUtils {
     static {
         AWSCredentials credentials = null;
         try {
-            credentials = new ProfileCredentialsProvider().getCredentials();
+            credentials = new ProfileCredentialsProvider(CREDENTIALS_PATH, null).getCredentials();
         } catch (Exception e) {
             System.err.println("Cannot load the credentials from the credential profiles file. " +
                 "Please make sure that your credentials file is at the correct " +

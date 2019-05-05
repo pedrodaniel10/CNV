@@ -8,6 +8,8 @@ Cloud Computing &amp; Virtualization - 2018/19
 Run **create_archives.sh** script.
 
 Create an AWS ec2 server instance (with port 8000 open for TCP), with java 7 installed.
+Download the [AWS Java SDK](http://sdk-for-java.amazonwebservices.com/latest/aws-java-sdk.zip)
+, and unzip it in the home directory.
 
 Copy the **web-server.zip** archive to the instance, and unzip it:
 ```
@@ -17,11 +19,26 @@ scp -i CNV-AWS.pem ./web-server.zip ec2-user@<IP_ADDRESS>:~
 Append the following, to **etc/rc.d/rc.local**:
 
 ```
-export CLASSPATH="$CLASSPATH:/home/ec2-user/web-server/pt/ulisboa/tecnico/cnv/instrumentation"
+export CLASSPATH="$CLASSPATH:/home/ec2-user/web-server/pt/ulisboa/tecnico/cnv/server:/home/ec2-user/web-server:/home/ec2-user/db-lib:/home/ec2-user/aws-java-sdk-1.11.546/lib/aws-java-sdk-1.11.546.jar:/home/ec2-user/aws-java-sdk-1.11.546/third-party/lib/*:."
 export _JAVA_OPTIONS="-XX:-UseSplitVerifier "$_JAVA_OPTIONS
 cd /home/ec2-user/web-server
-java pt.ulisboa.tecnico.cnv.server.WebServer
+java WebServer
 ```
+
+Create the **~/.aws** folder and put the following files in it:
+ 
+- webserver.properties (example)
+    ```
+    server-region=us-east-1
+    ```
+- credentials (example)
+    ```
+    [default]
+
+    aws_access_key_id=<ACCESS_KEY>
+
+    aws_secret_access_key=<SECRET_ACCESS_KEY>
+    ```
 
 Create an image of this instance.
 
@@ -38,7 +55,7 @@ Copy the **lb-bin.zip** archive to the instance, and unzip it:
 scp -i CNV-AWS.pem ./lb-bin.zip ec2-user@<IP_ADDRESS>:~
 ```
 
-Run the following, and append it to **etc/rc.d/rc.local**:
+Run the following:
 
 ```
 export CLASSPATH=$CLASSPATH:/home/ec2-user/aws-java-sdk-1.11.538/lib/aws-java-sdk-1.11.538.jar:/home/ec2-user/aws-java-sdk-1.11.538/third-party/lib/*:.
@@ -49,7 +66,7 @@ Create the **~/.aws** folder and put the following files in it:
 - webserver.properties (example)
     ```
     server-region=us-east-1
-    image-id=ami-060b9886531d37dea
+    image-id=ami-07bf5d6208975f9d5
     key-name=CNV-lab-AWS
     sec-group=CNV-ssh+http
     instace-type=t2.micro

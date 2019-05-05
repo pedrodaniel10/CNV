@@ -1,5 +1,3 @@
-package pt.ulisboa.tecnico.cnv.server;
-
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -12,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Executors;
+import java.util.List;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -20,6 +19,8 @@ import com.sun.net.httpserver.HttpServer;
 import pt.ulisboa.tecnico.cnv.solver.Solver;
 import pt.ulisboa.tecnico.cnv.solver.SolverArgumentParser;
 import pt.ulisboa.tecnico.cnv.solver.SolverFactory;
+import pt.ulisboa.tecnico.cnv.databaselib.HcRequest;
+import pt.ulisboa.tecnico.cnv.databaselib.DatabaseUtils;
 
 import javax.imageio.ImageIO;
 
@@ -54,11 +55,11 @@ public class WebServer {
 			// Break it down into String[].
 			final String[] params = query.split("&");
 
-
+			/*
 			for(String p: params) {
 				System.out.println(p);
 			}
-			
+			*/
 
 			// Store as if it was a direct call to SolverMain.
 			final ArrayList<String> newArgs = new ArrayList<>();
@@ -87,6 +88,20 @@ public class WebServer {
 			for(String ar : args) {
 				System.out.println("ar: " + ar);
 			} */
+
+			HcRequest hcRequest = new HcRequest();
+			hcRequest.buildRequestId(params);
+			List<HcRequest> queryResult = DatabaseUtils.getRequestById(hcRequest);
+
+			if (queryResult.isEmpty()) {
+				hcRequest = new HcRequest(params);
+				DatabaseUtils.save(hcRequest);
+			} else {
+				hcRequest = queryResult.get(0);
+			}
+			System.out.println(hcRequest.toString());
+
+			ICountParallel.initCounter(hcRequest);
 
 			SolverArgumentParser ap = null;
 			try {

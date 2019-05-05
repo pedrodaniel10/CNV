@@ -9,6 +9,7 @@ public class InstanceInfo {
     private boolean willTerminate = false;
     private double lastCpuMeasured = 0;
     private boolean isFresh = true;
+    private double work = 0;
 
     public InstanceInfo(Instance instance) {
         this.instance = instance;
@@ -56,5 +57,13 @@ public class InstanceInfo {
 
     public void setFresh(boolean fresh) {
         isFresh = fresh;
+    }
+
+    public double getWork() {
+        return work;
+    }
+
+    public void incrementWork(double incr) {
+        this.work += incr;
     }
 }

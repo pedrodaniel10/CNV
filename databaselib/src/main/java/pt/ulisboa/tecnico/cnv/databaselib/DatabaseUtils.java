@@ -5,7 +5,9 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
@@ -14,17 +16,21 @@ import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public final class DatabaseUtils {
 
     private static final String PROPERTIES_PATH = "/home/ec2-user/.aws/webserver.properties";
+    private static final String CREDENTIALS_PATH = "/home/ec2-user/.aws/credentials";
     private static AmazonDynamoDB dynamoDB;
     private static DynamoDBMapper dynamoDBMapper;
     public static final String tableName = "hc_requests";
 
     static {
-        ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
+        ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider(CREDENTIALS_PATH, null);
         try {
             credentialsProvider.getCredentials();
         } catch (Exception e) {
@@ -79,12 +85,14 @@ public final class DatabaseUtils {
         }
     }
 
-    public void save(HcRequest hcRequest) {
+    public static void save(HcRequest hcRequest) {
         dynamoDBMapper.save(hcRequest);
     }
 
-    public void parse(String request) {
-
+    public static List<HcRequest> getRequestById(HcRequest hcRequest) {
+        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+            .withHashKeyValues(hcRequest);
+        return dynamoDBMapper.query(HcRequest.class, queryExpression);
     }
 
 }
