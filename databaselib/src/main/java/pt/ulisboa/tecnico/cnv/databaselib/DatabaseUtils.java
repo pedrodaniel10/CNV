@@ -1,11 +1,14 @@
 package pt.ulisboa.tecnico.cnv.databaselib;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.comprehendmedical.model.AttributeName;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
@@ -16,6 +19,7 @@ import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,53 +99,43 @@ public final class DatabaseUtils {
         return dynamoDBMapper.query(HcRequest.class, queryExpression);
     }
 
-    public static List<HcRequest> getCompletedRequestsWithSameMapAndSimilarSize(HcRequest hcRequest) {
+    public static List<HcRequest> getCompletedRequestsWithSameMap(HcRequest hcRequest) {
+        List<HcRequest> queryResult = new ArrayList<>();
+
         Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val1", new AttributeValue().withN(String.valueOf(1)));
         eav.put(":val2", new AttributeValue().withS(hcRequest.getMap()));
-        eav.put(":val3", new AttributeValue().withN(String.valueOf((hcRequest.getX1() - hcRequest.getX0()) / 2)));
-        eav.put(":val4", new AttributeValue().withN(String.valueOf((hcRequest.getY1() - hcRequest.getY0()) / 2)));
 
-        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
-            .withFilterExpression("completed = :val1 and map = :val2 and (x1 - x0) < :val3 and (y1 - y0) < :val4")
+        Map<String, String> names = new HashMap<>();
+        names.put("#map", "map");
+
+        DynamoDBScanExpression scanExpression = new DynamoDBScanExpression()
+            .withFilterExpression("completed = :val1 and #map = :val2").withExpressionAttributeNames(names)
             .withExpressionAttributeValues(eav);
 
-        return dynamoDBMapper.query(HcRequest.class, queryExpression);
-    }
-
-    public static List<HcRequest> getCompletedRequestsWithSimilarSize(HcRequest hcRequest) {
-        Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withBOOL(true));
-        eav.put(":val2", new AttributeValue().withN(String.valueOf((hcRequest.getX1() - hcRequest.getX0()) / 2)));
-        eav.put(":val3", new AttributeValue().withN(String.valueOf((hcRequest.getY1() - hcRequest.getY0()) / 2)));
-
-        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
-            .withFilterExpression("completed = :val1 and (x1 - x0) < :val2 and (y1 - y0) < :val3")
-            .withExpressionAttributeValues(eav);
-
-        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+        return dynamoDBMapper.scan(HcRequest.class, scanExpression);
     }
 
     public static List<HcRequest> getCompletedRequestsWithSameStrategy(HcRequest hcRequest) {
         Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val1", new AttributeValue().withN(String.valueOf(1)));
         eav.put(":val2", new AttributeValue().withS(hcRequest.getStrategy()));
 
-        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
-            .withFilterExpression("completed = :val1 strategy = :val2")
+        DynamoDBScanExpression scanExpression = new DynamoDBScanExpression()
+            .withFilterExpression("completed = :val1 and strategy = :val2")
             .withExpressionAttributeValues(eav);
 
-        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+        return dynamoDBMapper.scan(HcRequest.class, scanExpression);
     }
 
     public static List<HcRequest> getCompletedRequests() {
         Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val1", new AttributeValue().withN(String.valueOf(1)));
 
-        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+        DynamoDBScanExpression scanExpression = new DynamoDBScanExpression()
             .withFilterExpression("completed = :val1")
             .withExpressionAttributeValues(eav);
 
-        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+        return dynamoDBMapper.scan(HcRequest.class, scanExpression);
     }
 }

@@ -58,7 +58,7 @@ scp -i CNV-AWS.pem ./lb-bin.zip ec2-user@<IP_ADDRESS>:~
 Run the following:
 
 ```
-export CLASSPATH=$CLASSPATH:/home/ec2-user/aws-java-sdk-1.11.538/lib/aws-java-sdk-1.11.538.jar:/home/ec2-user/aws-java-sdk-1.11.538/third-party/lib/*:.
+export CLASSPATH=$CLASSPATH:/home/ec2-user/db-lib:/home/ec2-user/aws-java-sdk-1.11.538/lib/aws-java-sdk-1.11.538.jar:/home/ec2-user/aws-java-sdk-1.11.538/third-party/lib/*:.
 ```
 
 Create the **~/.aws** folder and put the following files in it:

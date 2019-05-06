@@ -33,9 +33,11 @@ public class LoadBalancerHandler implements HttpHandler {
         List<HcRequest> queryResult = DatabaseUtils.getRequestById(hcRequest);
 
         if (!queryResult.isEmpty() && queryResult.get(0).isCompleted()) {
+            System.out.println("Request found in DB!");
             hcRequest = queryResult.get(0);
             requestWork = hcRequest.getMetrics();
         } else {
+            System.out.println("Request not found in DB, estimating work");
             hcRequest = new HcRequest(params);
             requestWork = calculateEstimatedWork(hcRequest);
         }
@@ -102,14 +104,16 @@ public class LoadBalancerHandler implements HttpHandler {
     private double calculateEstimatedWork(HcRequest hcRequest) {
         double estimatedWork = 0;
 
-        List<HcRequest> queryResult = DatabaseUtils.getCompletedRequestsWithSameMapAndSimilarSize(hcRequest);
+        List<HcRequest> queryResult = DatabaseUtils.getCompletedRequestsWithSameMap(hcRequest);
         if (!queryResult.isEmpty()) {
+            System.out.println(hcRequest.getRequestId() + ": Found requests with same map!");
             estimatedWork = estimateFromSameMapRequests(hcRequest, queryResult);
         }
 
         if (estimatedWork == 0) {
-            queryResult = DatabaseUtils.getCompletedRequestsWithSimilarSize(hcRequest);
+            queryResult = getCompletedRequestsWithSimilarSize(hcRequest, DatabaseUtils.getCompletedRequests());
             if (!queryResult.isEmpty()) {
+                System.out.println(hcRequest.getRequestId() + ": Found requests with similar size!");
                 estimatedWork = estimateFromSimilarSizeRequests(hcRequest, queryResult);
             }
         }
@@ -117,14 +121,16 @@ public class LoadBalancerHandler implements HttpHandler {
         if (estimatedWork == 0) {
             queryResult = DatabaseUtils.getCompletedRequestsWithSameStrategy(hcRequest);
             if (!queryResult.isEmpty()) {
-                estimatedWork = calculateAverageFromRequests(queryResult);
+                System.out.println(hcRequest.getRequestId() + ": Found requests with same strategy!");
+                estimatedWork = calculateAverageFromRequests(hcRequest, queryResult);
             }
         }
 
         if (estimatedWork == 0) {
             queryResult = DatabaseUtils.getCompletedRequests();
             if (!queryResult.isEmpty()) {
-                estimatedWork = calculateAverageFromRequests(queryResult);
+                System.out.println(hcRequest.getRequestId() + ": Estimating from average of all requests");
+                estimatedWork = calculateAverageFromRequests(hcRequest, queryResult);
             }
         }
 
@@ -132,36 +138,60 @@ public class LoadBalancerHandler implements HttpHandler {
             estimatedWork = 200000000; //estimated average
         }
 
-        return estimatedWork;
-    }
-
-    private double estimateFromSameMapRequests(HcRequest hcRequest, List<HcRequest> queryResult) {
-        int minStartingXDiff = (hcRequest.getX1() - hcRequest.getX0()) / 2;
-        int minStartingYDiff = (hcRequest.getY1() - hcRequest.getY0()) / 2;
-
-        double estimatedWork = 0;
-        for (HcRequest resultRequest : queryResult) {
-            int currentStartingXDiff = Math.abs(hcRequest.getxS() - resultRequest.getxS());
-            int currentStartingYDiff = Math.abs(hcRequest.getyS() - resultRequest.getyS());
-
-            if (currentStartingXDiff < minStartingXDiff && currentStartingYDiff < minStartingYDiff) {
-                minStartingXDiff = currentStartingXDiff;
-                minStartingYDiff = currentStartingYDiff;
-                estimatedWork = resultRequest.getMetrics();
-            }
-        }
-
-        if (estimatedWork == 0) {
-            estimatedWork = estimateFromSimilarSizeRequests(hcRequest, queryResult);
-        }
-
         System.out.println("Estimated work for request(" + hcRequest.getRequestId() + "): " + estimatedWork);
         return estimatedWork;
     }
 
+    private List<HcRequest> getCompletedRequestsWithSimilarSize(HcRequest hcRequest,
+        List<HcRequest> completedRequests) {
+        List<HcRequest> queryResult = new ArrayList<>();
+
+        int requestXSize = hcRequest.getX1() - hcRequest.getX0();
+        int requestYSize = hcRequest.getX1() - hcRequest.getX0();
+        int maxXDiff = requestXSize / 2;
+        int maxYDiff = requestYSize / 2;
+
+        for (HcRequest resultRequest : completedRequests) {
+            int currentXDiff = Math.abs((resultRequest.getX1() - resultRequest.getX0()) - requestXSize);
+            int currentYDiff = Math.abs((resultRequest.getY1() - resultRequest.getY0()) - requestYSize);
+
+            if (currentXDiff < maxXDiff && currentYDiff < maxYDiff) {
+                queryResult.add(resultRequest);
+            }
+        }
+        return queryResult;
+    }
+
+    private double estimateFromSameMapRequests(HcRequest hcRequest, List<HcRequest> queryResult) {
+        int minXDiff = (hcRequest.getX1() - hcRequest.getX0()) / 2;
+        int minYDiff = (hcRequest.getY1() - hcRequest.getY0()) / 2;
+        List<HcRequest> similarRequests = new ArrayList<>();
+
+        for (HcRequest resultRequest : queryResult) {
+            int currentX0Diff = Math.abs(hcRequest.getX0() - resultRequest.getX0());
+            int currentX1Diff = Math.abs(hcRequest.getX1() - resultRequest.getX1());
+            int currentY0Diff = Math.abs(hcRequest.getY0() - resultRequest.getY0());
+            int currentY1Diff = Math.abs(hcRequest.getY1() - resultRequest.getY1());
+            int currentStartingXDiff = Math.abs(hcRequest.getxS() - resultRequest.getxS());
+            int currentStartingYDiff = Math.abs(hcRequest.getyS() - resultRequest.getyS());
+
+            if (currentStartingXDiff < minXDiff && currentStartingYDiff < minYDiff
+                && currentX0Diff < minXDiff && currentX1Diff < minXDiff && currentY0Diff < minYDiff
+                && currentY1Diff < minYDiff) {
+
+                similarRequests.add(resultRequest);
+            }
+        }
+
+        if (!similarRequests.isEmpty()) {
+            return estimateFromSimilarSizeRequests(hcRequest, similarRequests);
+        } else {
+            return 0;
+        }
+    }
+
     private double estimateFromSimilarSizeRequests(HcRequest hcRequest, List<HcRequest> queryResult) {
         List<HcRequest> sameStrategyRequests = new ArrayList<>();
-        HcRequest minDiffRequest = null;
 
         int requestSize = (hcRequest.getX1() - hcRequest.getX0()) * (hcRequest.getY1() - hcRequest.getY0());
         int minDiff = requestSize;
@@ -176,23 +206,31 @@ public class LoadBalancerHandler implements HttpHandler {
             int diff = Math.abs(resultSize - requestSize);
             if (diff < minDiff) {
                 minDiff = diff;
-                minDiffRequest = resultRequest;
             }
         }
 
         if (!sameStrategyRequests.isEmpty()) {
-            return calculateAverageFromRequests(sameStrategyRequests);
+            return calculateAverageFromRequests(hcRequest, sameStrategyRequests);
         } else {
-            return minDiffRequest.getMetrics();
+            return calculateAverageFromRequests(hcRequest, queryResult);
         }
     }
 
-    private double calculateAverageFromRequests(List<HcRequest> queryResult) {
+    private double calculateAverageFromRequests(HcRequest hcRequest, List<HcRequest> queryResult) {
         double average = 0;
+        int averageSize = 0;
         for (HcRequest resultRequest : queryResult) {
             average += resultRequest.getMetrics();
+            averageSize +=
+                ((resultRequest.getX1() - resultRequest.getX0()) + (resultRequest.getY1() - resultRequest.getY0()))/2;
         }
         average /= queryResult.size();
+        averageSize /= queryResult.size();
+
+        int hcRequestSize = ((hcRequest.getX1() - hcRequest.getX0()) + (hcRequest.getY1() - hcRequest.getY0()))/2;
+
+        average = average*((hcRequestSize/averageSize)*(hcRequestSize/averageSize));
+
         return average;
     }
 

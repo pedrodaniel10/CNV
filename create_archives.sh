@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 rm -r lb-bin.zip web-server.zip
-cd loadbalancer
+cd databaselib
 
 if mvn clean install; then
     cd ..
-    cd databaselib
+    cd loadbalancer
     if mvn clean install; then
 	cd ..
 

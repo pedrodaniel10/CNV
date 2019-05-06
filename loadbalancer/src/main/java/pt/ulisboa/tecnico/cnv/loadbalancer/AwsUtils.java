@@ -203,12 +203,12 @@ public final class AwsUtils {
         updateRunningInstances();
 
         InstanceInfo instanceInfo = null;
-        int min = Integer.MAX_VALUE;
+        double min = Double.MAX_VALUE;
 
         for (Map.Entry<String, InstanceInfo> entry : runningInstanceInfos.entrySet()) {
-            if (entry.getValue().getNumCurrentRequests() < min && !entry.getValue().willTerminate()) {
+            if (entry.getValue().getWork() < min && !entry.getValue().willTerminate()) {
                 instanceInfo = entry.getValue();
-                min = instanceInfo.getNumCurrentRequests();
+                min = instanceInfo.getWork();
             }
         }
         return instanceInfo;

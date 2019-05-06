@@ -16,6 +16,7 @@ public class AutoScaler {
     }
 
     private static void scale() {
+        System.out.println("--------------------------------------");
         System.out.println("Auto-Scaling...");
 
         AwsUtils.updateCpuMetrics();
@@ -46,6 +47,7 @@ public class AutoScaler {
                 markLeastUsedInstance();
             }
         }
+        System.out.println("--------------------------------------");
     }
 
     private static void markLeastUsedInstance() {
