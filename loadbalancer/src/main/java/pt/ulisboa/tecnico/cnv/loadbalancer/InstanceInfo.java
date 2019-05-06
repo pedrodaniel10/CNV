@@ -63,7 +63,12 @@ public class InstanceInfo {
         return work;
     }
 
-    public void incrementWork(double incr) {
+    public synchronized void incrementWork(double incr) {
         this.work += incr;
     }
+
+    public synchronized void decrementWork(double decr) {
+        this.work -= decr;
+    }
+
 }

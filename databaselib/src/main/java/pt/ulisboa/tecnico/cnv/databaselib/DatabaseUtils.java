@@ -95,4 +95,53 @@ public final class DatabaseUtils {
         return dynamoDBMapper.query(HcRequest.class, queryExpression);
     }
 
+    public static List<HcRequest> getCompletedRequestsWithSameMapAndSimilarSize(HcRequest hcRequest) {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val2", new AttributeValue().withS(hcRequest.getMap()));
+        eav.put(":val3", new AttributeValue().withN(String.valueOf((hcRequest.getX1() - hcRequest.getX0()) / 2)));
+        eav.put(":val4", new AttributeValue().withN(String.valueOf((hcRequest.getY1() - hcRequest.getY0()) / 2)));
+
+        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+            .withFilterExpression("completed = :val1 and map = :val2 and (x1 - x0) < :val3 and (y1 - y0) < :val4")
+            .withExpressionAttributeValues(eav);
+
+        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+    }
+
+    public static List<HcRequest> getCompletedRequestsWithSimilarSize(HcRequest hcRequest) {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val2", new AttributeValue().withN(String.valueOf((hcRequest.getX1() - hcRequest.getX0()) / 2)));
+        eav.put(":val3", new AttributeValue().withN(String.valueOf((hcRequest.getY1() - hcRequest.getY0()) / 2)));
+
+        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+            .withFilterExpression("completed = :val1 and (x1 - x0) < :val2 and (y1 - y0) < :val3")
+            .withExpressionAttributeValues(eav);
+
+        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+    }
+
+    public static List<HcRequest> getCompletedRequestsWithSameStrategy(HcRequest hcRequest) {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withBOOL(true));
+        eav.put(":val2", new AttributeValue().withS(hcRequest.getStrategy()));
+
+        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+            .withFilterExpression("completed = :val1 strategy = :val2")
+            .withExpressionAttributeValues(eav);
+
+        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+    }
+
+    public static List<HcRequest> getCompletedRequests() {
+        Map<String, AttributeValue> eav = new HashMap<>();
+        eav.put(":val1", new AttributeValue().withBOOL(true));
+
+        DynamoDBQueryExpression<HcRequest> queryExpression = new DynamoDBQueryExpression<HcRequest>()
+            .withFilterExpression("completed = :val1")
+            .withExpressionAttributeValues(eav);
+
+        return dynamoDBMapper.query(HcRequest.class, queryExpression);
+    }
 }
