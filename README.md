@@ -5,6 +5,8 @@ Cloud Computing &amp; Virtualization - 2018/19
 
 ### WebServer
 
+Place the .dat and .png files from the dataset in **web-server/datasets**.
+
 Run **create_archives.sh** script.
 
 Create an AWS ec2 server instance (with port 8000 open for TCP), with java 7 installed.
@@ -66,7 +68,7 @@ Create the **~/.aws** folder and put the following files in it:
 - webserver.properties (example)
     ```
     server-region=us-east-1
-    image-id=ami-07bf5d6208975f9d5
+    image-id=ami-0e38c8854738d9646
     key-name=CNV-lab-AWS
     sec-group=CNV-ssh+http
     instace-type=t2.micro

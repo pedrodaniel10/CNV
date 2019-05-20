@@ -1,6 +1,7 @@
 # Compiled class file
-*.class
-!web-server/*.class
+databaselib/*.class
+loadbalancer/*.class
+*.png
 
 # Log file
 *.log

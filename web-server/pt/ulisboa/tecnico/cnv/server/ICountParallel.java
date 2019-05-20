@@ -29,9 +29,9 @@ public class ICountParallel {
                 // see java.util.Enumeration for more information on Enumeration class
                 for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
                     Routine routine = (Routine) e.nextElement();
-                    
+
                     routine.addBefore("ICountParallel", "count", new Integer(routine.getInstructionCount()));
-                    
+
                     if (routine.getMethodName().equals("solveImage")) { 
                         routine.addAfter("ICountParallel", "printICount", ci.getClassName());
                     }

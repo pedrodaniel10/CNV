@@ -8,6 +8,8 @@ public class LoadBalancerApplication {
 
     public static void main(final String[] args) throws Exception {
 
+        AwsUtils.init();
+
         final HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
         server.createContext("/climb", new LoadBalancerHandler());

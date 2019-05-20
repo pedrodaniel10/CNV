@@ -17,7 +17,6 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.util.EC2MetadataUtils;
 import java.io.FileInputStream;
@@ -86,6 +85,11 @@ public final class AwsUtils {
     private AwsUtils() {
     }
 
+    public static void init() {
+        updateRunningInstances();
+        liveInstancesCounter.getAndSet(runningInstanceInfos.size());
+    }
+
     private static void updateRunningInstances() {
         Set<Instance> instances = getInstances(RUNNING_CODE);
         for (Instance inst : instances) {
@@ -93,6 +97,16 @@ public final class AwsUtils {
                 runningInstanceInfos.put(inst.getInstanceId(), new InstanceInfo(inst));
             } else {
                 runningInstanceInfos.get(inst.getInstanceId()).setInstance(inst);
+            }
+        }
+
+        for (Map.Entry<String, InstanceInfo> entry : AwsUtils.runningInstanceInfos.entrySet()) {
+            Instance instance = entry.getValue().getInstance();
+            if (!instances.contains(instance)) {
+                System.out.println(
+                    "Instance " + instance.getInstanceId() + " was abruptly stopped. Removing it from the list.");
+                runningInstanceInfos.remove(instance.getInstanceId());
+                liveInstancesCounter.getAndDecrement();
             }
         }
     }
@@ -150,8 +164,13 @@ public final class AwsUtils {
     public static int getInstanceStatus(String instanceId) {
         DescribeInstancesRequest describeInstanceRequest = new DescribeInstancesRequest().withInstanceIds(instanceId);
         DescribeInstancesResult describeInstanceResult = ec2.describeInstances(describeInstanceRequest);
-        InstanceState state = describeInstanceResult.getReservations().get(0).getInstances().get(0).getState();
-        return state.getCode();
+
+        if (describeInstanceResult.getReservations().isEmpty()) {
+            return -1;
+        } else {
+            InstanceState state = describeInstanceResult.getReservations().get(0).getInstances().get(0).getState();
+            return state.getCode();
+        }
     }
 
     public static void updateCpuMetrics() {
