@@ -1,6 +1,32 @@
 # CNV
 Cloud Computing &amp; Virtualization - 2018/19
 
+
+## Requirements
+Install the following tools:
+
+- Maven 3.x.x
+- Java Development Kit 7 (JDK 7)
+
+
+## Structure and organization
+
+The project is organized in 3 modules: 
+- **databaselib**, a library that contains code to interact with DynamoDB.
+- **loadbalancer**, which contains the code to run in the Load Balancer server.
+- **web-server**, which contains the code to run in the Web server.
+
+The first two modules use maven, and the last already has all the files compiled.
+
+## How to compile
+
+Execute the following command:
+
+```
+./create_archives.sh
+```
+
+
 ## How to run
 
 ### WebServer
@@ -9,7 +35,7 @@ Place the .dat and .png files from the dataset in **web-server/datasets**.
 
 Run **create_archives.sh** script.
 
-Create an AWS ec2 server instance (with port 8000 open for TCP), with java 7 installed.
+Create an AWS ec2 server instance, with port 8000 open for TCP, and java 7 installed.
 Download the [AWS Java SDK](http://sdk-for-java.amazonwebservices.com/latest/aws-java-sdk.zip)
 , and unzip it in the home directory.
 
@@ -48,7 +74,7 @@ Create an image of this instance.
 
 Run **create_archives.sh** script (if you haven't already).
 
-Create an AWS ec2 server instance (with port 8080 open for TCP), with java 7 installed. 
+Create an AWS ec2 server instance, with port 8080 open for TCP, and java 7 installed. 
 Download the [AWS Java SDK](http://sdk-for-java.amazonwebservices.com/latest/aws-java-sdk.zip)
 , and unzip it in the home directory.
 
