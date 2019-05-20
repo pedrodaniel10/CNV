@@ -44,7 +44,7 @@ Copy the **web-server.zip** archive to the instance, and unzip it:
 scp -i CNV-AWS.pem ./web-server.zip ec2-user@<IP_ADDRESS>:~
 ```
 
-Append the following, to **etc/rc.d/rc.local**:
+Append the following, to **etc/rc.d/rc.local** (change the aws package version, if needed):
 
 ```
 export CLASSPATH="$CLASSPATH:/home/ec2-user/web-server/pt/ulisboa/tecnico/cnv/server:/home/ec2-user/web-server:/home/ec2-user/db-lib:/home/ec2-user/aws-java-sdk-1.11.546/lib/aws-java-sdk-1.11.546.jar:/home/ec2-user/aws-java-sdk-1.11.546/third-party/lib/*:."
@@ -83,7 +83,7 @@ Copy the **lb-bin.zip** archive to the instance, and unzip it:
 scp -i CNV-AWS.pem ./lb-bin.zip ec2-user@<IP_ADDRESS>:~
 ```
 
-Run the following:
+Run the following (change the aws package version, if needed):
 
 ```
 export CLASSPATH=$CLASSPATH:/home/ec2-user/db-lib:/home/ec2-user/aws-java-sdk-1.11.538/lib/aws-java-sdk-1.11.538.jar:/home/ec2-user/aws-java-sdk-1.11.538/third-party/lib/*:.
