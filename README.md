@@ -1,5 +1,5 @@
-# CNV
-Cloud Computing &amp; Virtualization - 2018/19
+# CNV - 2018/2019
+Cloud Computing &amp; Virtualization project - HillClimbing@Cloud
 
 
 ## Requirements
